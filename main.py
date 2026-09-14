@@ -3,7 +3,7 @@ from database import engine,Base,SessionLocal
 import models
 from sqlalchemy.orm import session
 from schemas import HabitCreate, HabitResponse,HabitUpdate
-
+from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind=engine)
 
@@ -17,6 +17,17 @@ def get_db():
         
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/habits")
 def get_all_habits(db : session = Depends(get_db)):

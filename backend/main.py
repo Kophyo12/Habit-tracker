@@ -1,6 +1,7 @@
 from fastapi import FastAPI,Depends,HTTPException
 from database import engine,Base,SessionLocal
 import models
+from datetime import date
 from sqlalchemy.orm import session
 from schemas import HabitCreate, HabitResponse,HabitUpdate
 from fastapi.middleware.cors import CORSMiddleware
@@ -76,6 +77,43 @@ def update_habit(habit_id : int,habit_data : HabitUpdate,db:session=Depends(get_
     db.commit()
     db.refresh(habit)
     return habit
+
+
+#POST method for the completion
+@app.post("/habits/{habit_id}/complete")
+def complete_habit(
+    habit_id : int,
+    db : session = Depends(get_db)
+):
+    habit = db.query(models.Habit).filter(models.Habit.id == habit_id).first()
+
+    if habit is None:
+        raise HTTPException(
+            status_code= 404,
+            detail= "Habit not found"
+        )
+    today = date.today()
+
+    completion = db.query(models.HabitCompletion).filter(
+        models.HabitCompletion.habit_id == habit_id,
+        models.HabitCompletion.date == today
+    ).first()
+    if completion is None:
+        completion = models.HabitCompletion(
+            habit_id = habit_id,
+            date = today
+        )
+        db.add(completion)
+
+    else:
+        completion.completed = not completion.completed
+
+    db.commit()
+    db.refresh(completion)
+    return completion
+
+
+
 
 @app.delete("/habits/{habit_id}")
 def delete_habit(

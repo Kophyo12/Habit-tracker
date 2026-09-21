@@ -148,16 +148,16 @@ body {
 }
 
 .progress-day.level-1 {
-    background: #555;
+    background: #0e4429;
 }
 .progress-day.level-2 {
-    background: #888;
+    background: #006d32;
 }
 .progress-day.level-3{
-    background: #bbb;
+    background: #26a641;
 }
 .progress-day.level-4{
-    background: white;
+    background: #39d353;
 }
 .progress-day:hover {
     background: white;

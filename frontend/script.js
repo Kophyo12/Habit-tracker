@@ -98,53 +98,34 @@ function displayHabits(habits) {
 
         checkBox.addEventListener("click", function() {
 
-            const habitId = habitRow.dataset.habitId;
+        const habitId = habitRow.dataset.habitId;
 
+        if (!completions[selectedDay]) {
+            completions[selectedDay] = [];
+        }
 
-            // Create an array for this day if it
-            // does not exist yet.
-            if (!completions[selectedDay]) {
+        if (checkBox.textContent === "□") {
 
-                completions[selectedDay] = [];
-            }
+            checkBox.textContent = "✓";
+            habitTitle.style.textDecoration = "line-through";
 
+            completions[selectedDay].push(habitId);
 
-            // COMPLETE
-            if (checkBox.textContent === "□") {
+        } else {
 
-                checkBox.textContent = "✓";
+            checkBox.textContent = "□";
+            habitTitle.style.textDecoration = "none";
 
-                habitTitle.style.textDecoration =
-                    "line-through";
+            completions[selectedDay] =
+                completions[selectedDay].filter(function(id) {
+                    return id !== habitId;
+                });
+        }
 
+        updateProgress(selectedDay);
 
-                completions[selectedDay].push(habitId);
-            }
-
-
-            // UNCOMPLETE
-            else {
-
-                checkBox.textContent = "□";
-
-                habitTitle.style.textDecoration =
-                    "none";
-
-
-                completions[selectedDay] =
-                    completions[selectedDay].filter(
-                        function(id) {
-
-                            return id !== habitId;
-                        }
-                    );
-            }
-            updateProgress(selectedDay);
-
-
-            console.log("Completions:", completions);
-        });
-
+        console.log("Completions:", completions);
+});
 
         // ========================================
         // EDIT HABIT
@@ -181,34 +162,42 @@ function displayHabits(habits) {
         // DELETE HABIT
         // ========================================
 
-deleteButton.addEventListener("click", async function() {
+        deleteButton.addEventListener("click", async function() {
 
-    const response = await fetch(`${API_URL}/habits/${habit.id}`, {
-        method: "DELETE"
-    });
-
-    if (response.ok) {
-
-        // Remove the habit from the page
-        habitRow.remove();
-
-        // Update the number of habits
-        totalHabits--;
-
-        // Remove this habit from today's completed habits
-        if (completions[selectedDay]) {
             const habitId = habitRow.dataset.habitId;
 
-            completions[selectedDay] =
-                completions[selectedDay].filter(function(id) {
-                    return id !== habitId;
-                });
-        }
+            const response = await fetch(
+                `${API_URL}/habits/${habit.id}`,
+                {
+                    method: "DELETE"
+                }
+            );
 
-        // Recalculate the progress square color
-        updateProgress(selectedDay);
-    }
-    });
+            if (response.ok) {
+
+                // Remove the habit from the page
+                habitRow.remove();
+
+                // Remove it from completions if it was completed
+                if (completions[selectedDay]) {
+
+                    completions[selectedDay] =
+                        completions[selectedDay].filter(function(id) {
+                            return id !== habitId;
+                        });
+                }
+
+                // One less total habit
+                totalHabits--;
+
+                // Recalculate the progress color
+                updateProgress(selectedDay);
+
+                console.log("After delete:");
+                console.log("Completions:", completions[selectedDay]);
+                console.log("Total habits:", totalHabits);
+            }
+        });
         // Finally put this row on the page
         habitTracker.appendChild(habitRow);
     });
@@ -230,26 +219,32 @@ function displayTodayDate(){
 }
 
 
-
-
 //==========
 // UPDATE THE PROGRESS
 //=========
 function updateProgress(day) {
+
     let completedHabits = 0;
+
     if (completions[day]) {
-        completedHabits = completions[day].length
+        completedHabits = completions[day].length;
     }
+
     let completionRate = 0;
+
     if (totalHabits > 0) {
         completionRate = completedHabits / totalHabits;
     }
-    const dayBox = document.querySelector(`.progress-day[data-day="${day}"]`)
+
+    const dayBox = document.querySelector(
+        `.progress-day[data-day="${day}"]`
+    );
 
     if (!dayBox) {
         return;
-    };
+    }
 
+    // Always remove the previous color first
     dayBox.classList.remove(
         "level-1",
         "level-2",
@@ -257,10 +252,12 @@ function updateProgress(day) {
         "level-4"
     );
 
-    if (completionRate === 0){
+    // If nothing is completed, leave it with no level class
+    if (completionRate === 0) {
         return;
     }
-    else if (completionRate <= 0.25){
+
+    if (completionRate <= 0.25) {
         dayBox.classList.add("level-1");
     }
     else if (completionRate <= 0.50) {
@@ -271,12 +268,12 @@ function updateProgress(day) {
     }
     else {
         dayBox.classList.add("level-4");
-}
+    }
 
-    console.log("day: " , day );
-    console.log("completed-habits: ", completedHabits);
-    console.log("Total-habits: ", totalHabits)
-
+    console.log("Day:", day);
+    console.log("Completed:", completedHabits);
+    console.log("Total:", totalHabits);
+    console.log("Rate:", completionRate);
 }
 
 // ========================================

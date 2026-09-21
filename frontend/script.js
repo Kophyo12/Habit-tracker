@@ -10,6 +10,17 @@ let selectedDay = today.getDate();
 let completions = {};
 let totalHabits = 0;
 
+function getDateKey(day) {
+
+    const month =
+        String(currentMonth + 1).padStart(2, "0");
+
+    const formattedDay =
+        String(day).padStart(2, "0");
+
+    return `${currentYear}-${month}-${formattedDay}`;
+}
+
 
 
 // ========================================

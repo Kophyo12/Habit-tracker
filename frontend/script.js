@@ -1,180 +1,572 @@
 const API_URL = "http://127.0.0.1:8000";
+
 let editingHabitId = null;
 
+const today = new Date()
+let currentYear = today.getFullYear();
+let currentMonth = today.getMonth(); // September. January = 0
+let selectedDay = today.getDate();
+
+let completions = {};
+let totalHabits = 0;
+
+
+
+// ========================================
+//  LOAD HABITS FROM BACKEND
+// ========================================
 
 async function loadHabits() {
 
     const response = await fetch(`${API_URL}/habits`);
-    const habits = await response.json();
-    displayHabits(habits)
 
+    const habits = await response.json();
+
+    displayHabits(habits);
 }
 
 
-function displayHabits(habits){
+// ========================================
+//  DISPLAY HABITS
+// ========================================
 
-    const habitList = document.getElementById("habit-list");
+function displayHabits(habits) {
 
-    habitList.innerHTML = "";
+    const habitTracker = document.getElementById("habit-tracker");
+
+    habitTracker.innerHTML = "";
+    totalHabits = habits.length;
+
 
     habits.forEach(function(habit) {
 
-        const habitCard = document.createElement("div")
+        // Create one row
+        const habitRow = document.createElement("div");
 
-        habitCard.className = "habit-card"
+        habitRow.className = "habit-row";
 
-        habitCard.innerHTML = `
+        // Store database ID in this row
+        habitRow.dataset.habitId = habit.id;
 
-        <h2>${habit.task}</h2>
 
-        <p>${habit.description || "No description"}</p>
+        // Create visible content
+        habitRow.innerHTML = `
+            <div class="habit-name">
 
-        <p>Status: ${habit.active ? "Active" : "Inactive"}</p>
+                <span class="habit-check">□</span>
 
-        <button class = "delete-btn" data-id="${habit.id}">
+                <span class="habit-title">
+                    ${habit.task}
+                </span>
 
-        Delete </button>
+            </div>
 
-        <button class = "edit-btn" data-id="${habit.id}">
+            <div class="habit-actions">
 
-        Edit </button>
+                <button class="edit-btn">
+                    Edit
+                </button>
 
-        `
+                <button class="delete-btn">
+                    Delete
+                </button>
 
-        habitList.appendChild(habitCard)
+            </div>
+        `;
 
-    })
 
-    delete_buttons = document.querySelectorAll(".delete-btn")
+        // ========================================
+        // GET ELEMENTS FROM THIS HABIT ROW
+        // ========================================
 
-    delete_buttons.forEach(function(button) {
+        const checkBox =
+            habitRow.querySelector(".habit-check");
 
-        button.addEventListener("click",async function () {
+        const habitTitle =
+            habitRow.querySelector(".habit-title");
 
-            const habitId = button.dataset.id
+        const editButton =
+            habitRow.querySelector(".edit-btn");
 
-            const response = await fetch(`${API_URL}/habits/${habitId}`,{
+        const deleteButton =
+            habitRow.querySelector(".delete-btn");
 
-                method : "DELETE"
 
-            });
+        // ========================================
+        // CHECK / UNCHECK HABIT
+        // ========================================
 
-            if (response.ok) {
+        checkBox.addEventListener("click", function() {
 
-                loadHabits()
+            const habitId = habitRow.dataset.habitId;
 
-            }   
 
+            // Create an array for this day if it
+            // does not exist yet.
+            if (!completions[selectedDay]) {
+
+                completions[selectedDay] = [];
+            }
+
+
+            // COMPLETE
+            if (checkBox.textContent === "□") {
+
+                checkBox.textContent = "✓";
+
+                habitTitle.style.textDecoration =
+                    "line-through";
+
+
+                completions[selectedDay].push(habitId);
+            }
+
+
+            // UNCOMPLETE
+            else {
+
+                checkBox.textContent = "□";
+
+                habitTitle.style.textDecoration =
+                    "none";
+
+
+                completions[selectedDay] =
+                    completions[selectedDay].filter(
+                        function(id) {
+
+                            return id !== habitId;
+                        }
+                    );
+            }
+            updateProgress(selectedDay);
+
+
+            console.log("Completions:", completions);
         });
 
-    })
 
-    edit_buttons = document.querySelectorAll(".edit-btn")
+        // ========================================
+        // EDIT HABIT
+        // ========================================
 
-    edit_buttons.forEach(function(button) {
+        editButton.addEventListener("click", function() {
 
-        button.addEventListener("click", async function(){
+            const nameInput =
+                document.getElementById("habit-name");
 
-        const habitId = button.dataset.id
-            //editing-vari id 
-        editingHabitId = habitId;
-
-        const response = await fetch(`${API_URL}/habits/${habitId}`)
-
-        const habit = await response.json()
-        
-        const nameInput = document.getElementById("habit-name")
-        const descriptionInput = document.getElementById("habit-description")
-
-        nameInput.value = habit.task;
-        descriptionInput.value = habit.description || "";
+            const descriptionInput =
+                document.getElementById(
+                    "habit-description"
+                );
 
 
-        habitForm.style.display = "block";
+            // Remember which habit we're editing
+            editingHabitId = habit.id;
 
 
-    })
+            // Put existing data into the form
+            nameInput.value = habit.task;
 
-});
+            descriptionInput.value =
+                habit.description || "";
+
+
+            // Show form
+            habitForm.style.display = "block";
+        });
+
+
+        // ========================================
+        // DELETE HABIT
+        // ========================================
+
+deleteButton.addEventListener("click", async function() {
+
+    const response = await fetch(`${API_URL}/habits/${habit.id}`, {
+        method: "DELETE"
+    });
+
+    if (response.ok) {
+
+        // Remove the habit from the page
+        habitRow.remove();
+
+        // Update the number of habits
+        totalHabits--;
+
+        // Remove this habit from today's completed habits
+        if (completions[selectedDay]) {
+            const habitId = habitRow.dataset.habitId;
+
+            completions[selectedDay] =
+                completions[selectedDay].filter(function(id) {
+                    return id !== habitId;
+                });
+        }
+
+        // Recalculate the progress square color
+        updateProgress(selectedDay);
+    }
+    });
+        // Finally put this row on the page
+        habitTracker.appendChild(habitRow);
+    });
+}
+//===========================
+//DISPLAYING TODAY DATE
+//===========================
+function displayTodayDate(){
+    const todayDate =
+        document.getElementById("today-date");
+
+    todayDate.textContent =
+        today.toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric"
+        });
 }
 
 
 
-const addHabitButton = document.getElementById("add-habit-btn");
 
-const habitForm = document.getElementById("habit-form");
-
-addHabitButton.addEventListener("click", function() {
-
-    habitForm.style.display = "block";
-
-});
-
-
-
-const createHabitButton = document.getElementById("create-habit-btn");
-
-createHabitButton.addEventListener("click", async function() {
-
-    const nameInput = document.getElementById("habit-name")
-
-    const descriptionInput = document.getElementById("habit-description");
-
-    const name = nameInput.value;
-
-    const description = descriptionInput.value
-
-    if (editingHabitId == null) {
-
-    const response = await fetch(`${API_URL}/habits`, {
-
-        method : "POST",
-
-        headers : {
-
-            "Content-Type" : "application/json"
-
-        },
-
-        body : JSON.stringify({
-
-            task : name,
-
-            description : description
-
-        }),
-
-    })
-
-    if (response.ok) {
-
-        nameInput.value = "";
-
-        descriptionInput.value = "";
-
-        habitForm.style.display = "none"
-
-        loadHabits()
+//==========
+// UPDATE THE PROGRESS
+//=========
+function updateProgress(day) {
+    let completedHabits = 0;
+    if (completions[day]) {
+        completedHabits = completions[day].length
     }
+    let completionRate = 0;
+    if (totalHabits > 0) {
+        completionRate = completedHabits / totalHabits;
     }
-    else{
-        const response = await fetch(`${API_URL}/habits/${editingHabitId}`, {
-                method : "PUT",
-                headers : {
-                    "Content-Type" : "application/json"
-                },
-                body : JSON.stringify({
-                    task : name,
-                    description : description
-                })
-        });
-        if (response.ok) {
-            nameInput.value = "";
-            descriptionInput.value = ""
-            editingHabitId = null
-            habitForm.style.display = "none"
-            loadHabits()
+    const dayBox = document.querySelector(`.progress-day[data-day="${day}"]`)
+
+    if (!dayBox) {
+        return;
+    };
+
+    dayBox.classList.remove(
+        "level-1",
+        "level-2",
+        "level-3",
+        "level-4"
+    );
+
+    if (completionRate === 0){
+        return;
+    }
+    else if (completionRate <= 0.25){
+        dayBox.classList.add("level-1");
+    }
+    else if (completionRate <= 0.50) {
+        dayBox.classList.add("level-2");
+    }
+    else if (completionRate <= 0.75) {
+        dayBox.classList.add("level-3");
+    }
+    else {
+        dayBox.classList.add("level-4");
+}
+
+    console.log("day: " , day );
+    console.log("completed-habits: ", completedHabits);
+    console.log("Total-habits: ", totalHabits)
+
+}
+
+// ========================================
+// 3. CREATE MONTHLY PROGRESS GRID
+// ========================================
+
+function createProgressGrid() {
+
+    const grid =
+        document.getElementById("github-grid");
+
+    grid.innerHTML = "";
+
+
+    // Get correct number of days in month
+    const daysInMonth =
+        new Date(
+            currentYear,
+            currentMonth + 1,
+            0
+        ).getDate();
+
+
+    for (
+        let day = 1;
+        day <= daysInMonth;
+        day++
+    ) {
+
+        const dayBox =
+            document.createElement("div");
+
+
+        dayBox.className = "progress-day";
+
+
+        // Store day number in element
+        dayBox.dataset.day = day;
+
+
+        // Select a day
+        dayBox.addEventListener(
+            "click",
+            function() {
+
+                selectedDay =
+                    Number(dayBox.dataset.day);
+
+
+                console.log(
+                    "Selected day:",
+                    selectedDay
+                );
+            }
+        );
+
+
+        grid.appendChild(dayBox);
+    }
+}
+
+
+// ========================================
+// 4. UPDATE MONTH TEXT
+// ========================================
+
+function updateMonthText() {
+
+    const monthText =
+        document.getElementById(
+            "current-month"
+        );
+
+
+    const date =
+        new Date(
+            currentYear,
+            currentMonth
+        );
+
+
+    monthText.textContent =
+        date.toLocaleString(
+            "en-US",
+            {
+                month: "long",
+                year: "numeric"
+            }
+        );
+}
+
+
+// ========================================
+// 5. NEXT MONTH
+// ========================================
+
+document
+    .getElementById("next-month")
+    .addEventListener(
+        "click",
+        function() {
+
+            currentMonth++;
+
+            createProgressGrid();
+
+            updateMonthText();
+        }
+    );
+
+
+// ========================================
+// 6. PREVIOUS MONTH
+// ========================================
+
+document
+    .getElementById("previous-month")
+    .addEventListener(
+        "click",
+        function() {
+
+            currentMonth--;
+
+            createProgressGrid();
+
+            updateMonthText();
+        }
+    );
+
+
+// ========================================
+// 7. SHOW ADD HABIT FORM
+// ========================================
+
+const addHabitButton =
+    document.getElementById(
+        "add-habit-btn"
+    );
+
+const habitForm =
+    document.getElementById(
+        "habit-form"
+    );
+
+
+addHabitButton.addEventListener(
+    "click",
+    function() {
+
+        // We're creating, not editing
+        editingHabitId = null;
+
+
+        // Clear old form values
+        document.getElementById(
+            "habit-name"
+        ).value = "";
+
+        document.getElementById(
+            "habit-description"
+        ).value = "";
+
+
+        habitForm.style.display = "block";
+    }
+);
+
+
+// ========================================
+// 8. CREATE / UPDATE HABIT
+// ========================================
+
+const createHabitButton =
+    document.getElementById(
+        "create-habit-btn"
+    );
+
+
+createHabitButton.addEventListener(
+    "click",
+    async function() {
+
+        const nameInput =
+            document.getElementById(
+                "habit-name"
+            );
+
+        const descriptionInput =
+            document.getElementById(
+                "habit-description"
+            );
+
+
+        const name = nameInput.value;
+
+        const description =
+            descriptionInput.value;
+
+
+        // ====================================
+        // CREATE
+        // ====================================
+
+        if (editingHabitId === null) {
+
+            const response =
+                await fetch(
+                    `${API_URL}/habits`,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            task: name,
+                            description: description
+                        })
+                    }
+                );
+
+
+            if (response.ok) {
+
+                nameInput.value = "";
+
+                descriptionInput.value = "";
+
+                habitForm.style.display =
+                    "none";
+
+
+                loadHabits();
+            }
+        }
+
+
+        // ====================================
+        // UPDATE
+        // ====================================
+
+        else {
+
+            const response =
+                await fetch(
+                    `${API_URL}/habits/${editingHabitId}`,
+                    {
+                        method: "PUT",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            task: name,
+                            description: description
+                        })
+                    }
+                );
+
+
+            if (response.ok) {
+
+                nameInput.value = "";
+
+                descriptionInput.value = "";
+
+                editingHabitId = null;
+
+                habitForm.style.display =
+                    "none";
+
+
+                loadHabits();
+            }
         }
     }
+);
 
-});
+
+// ========================================
+// 9. START APPLICATION
+// ========================================
+
+loadHabits();
+
+createProgressGrid();
+
+updateMonthText();
+displayTodayDate();

@@ -1,40 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Habit Tracker</title>
+    <title>Habit Tracker</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div class="container">
-        <h1>My habits</h1>
+
+    <div class="app">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <div class="title-area">
+                <h1>HABIT TRACKER</h1>
+                <p id="today-date"></p>
+            </div>
+
+            <div class="month-controls">
+                <span id="current-month">September 2026</span>
+
+                <button id="previous-month">&lt;</button>
+                <button id="next-month">&gt;</button>
+            </div>
+
+        </header>
+
+
+        <!-- HABIT TRACKER -->
+        <section class="tracker-section">
+
+            <div id="habit-tracker">
+                <!-- JavaScript will put habits here -->
+            </div>
+
+        </section>
+
+
+        <!-- PROGRESS -->
+        <section class="progress-section">
+
+            <h2>PROGRESS</h2>
+
+            <div id="github-grid">
+                <!-- JavaScript will put progress squares here -->
+            </div>
+
+        </section>
+
+
+        <!-- ADD / EDIT HABIT FORM -->
+        <div id="habit-form">
+
+            <input
+                type="text"
+                id="habit-name"
+                placeholder="Task For Today"
+            >
+
+            <input
+                type="text"
+                id="habit-description"
+                placeholder="Description"
+            >
+
+            <button id="create-habit-btn">
+                Create habit
+            </button>
+
+        </div>
+
+
         <button id="add-habit-btn">
-            +Add Habit
-        </button>
-    <div id="habit-form">
-        <input
-            type="text"
-            id="habit-name"
-            placeholder="Task For Today"
-        >
-
-        <input
-            type="text"
-            id="habit-description"
-            placeholder="Description"
-        >
-
-        <button id="create-habit-btn">
-            Create habit
+            + Add Habit
         </button>
 
     </div>
 
-     <div id="habit-list"></div>
-    
-    </div>
-    
+
     <script src="script.js"></script>
+
 </body>
+
 </html>

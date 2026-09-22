@@ -1,4 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
+from datetime import datetime, timedelta
+from calendar import monthrange
+from zoneinfo import ZoneInfo
 from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.orm import Session
@@ -70,7 +73,7 @@ def get_all_habits(
 
     habits = db.query(
         models.Habit
-    ).all()
+    ).filter(models.Habit.active == True).all()
 
     return habits
 
@@ -121,7 +124,7 @@ def get_habit_by_id(
         models.Habit.id == habit_id
     ).first()
 
-    if habit is None:
+    if habit is None or not habit.active:
 
         raise HTTPException(
             status_code=404,
@@ -151,7 +154,7 @@ def update_habit(
         models.Habit.id == habit_id
     ).first()
 
-    if habit is None:
+    if habit is None or not habit.active:
 
         raise HTTPException(
             status_code=404,
@@ -190,20 +193,57 @@ def delete_habit(
         models.Habit.id == habit_id
     ).first()
 
-    if habit is None:
+    if habit is None or not habit.active:
 
         raise HTTPException(
             status_code=404,
             detail="Habit not found"
         )
 
-    db.delete(habit)
-
+    habit.active = False
     db.commit()
 
     return {
-        "message": "Habit deleted successfully"
+        "message": "Habit archived successfully"
     }
+
+
+@app.get("/progress")
+def get_progress(
+    year: int,
+    month: int,
+    db: Session = Depends(get_db)
+):
+    if not 1 <= year <= 9999 or not 1 <= month <= 12:
+        raise HTTPException(status_code=422, detail="Invalid year or month")
+
+    first_day = datetime(year, month, 1).date()
+    last_day = first_day.replace(day=monthrange(year, month)[1])
+    habits = db.query(models.Habit).filter(models.Habit.active == True).all()
+    completed = db.query(models.HabitCompletion).filter(
+        models.HabitCompletion.date >= first_day,
+        models.HabitCompletion.date <= last_day,
+        models.HabitCompletion.completed == True
+    ).all()
+    completed_by_date = {}
+    for item in completed:
+        completed_by_date.setdefault(item.date, set()).add(item.habit_id)
+
+    progress = {}
+    day = first_day
+    while day <= last_day:
+        completed_ids = completed_by_date.get(day, set())
+        eligible = {
+            habit.id for habit in habits
+            if habit.created_at.date() <= day
+        }
+        progress[day.isoformat()] = {
+            "completed": len(completed_ids & eligible),
+            "total": len(eligible)
+        }
+        day += timedelta(days=1)
+
+    return progress
 
 
 # ========================================
@@ -220,13 +260,19 @@ def toggle_completion(
     db: Session = Depends(get_db)
 ):
 
+    if completion_data.date != datetime.now(ZoneInfo("Asia/Bangkok")).date():
+        raise HTTPException(
+            status_code=403,
+            detail="Completions can only be changed for today"
+        )
+
     habit = db.query(
         models.Habit
     ).filter(
         models.Habit.id == habit_id
     ).first()
 
-    if habit is None:
+    if habit is None or not habit.active:
 
         raise HTTPException(
             status_code=404,

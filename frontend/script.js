@@ -110,9 +110,10 @@ function displayHabits(habits) {
         checkBox.addEventListener("click", function() {
 
         const habitId = habitRow.dataset.habitId;
+        const dateKey = getDateKey(selectedDay);
 
-        if (!completions[selectedDay]) {
-            completions[selectedDay] = [];
+        if (!completions[dateKey]) {
+            completions[dateKey] = [];
         }
 
         if (checkBox.textContent === "□") {
@@ -120,20 +121,20 @@ function displayHabits(habits) {
             checkBox.textContent = "✓";
             habitTitle.style.textDecoration = "line-through";
 
-            completions[selectedDay].push(habitId);
+            completions[dateKey].push(habitId);
 
         } else {
 
             checkBox.textContent = "□";
             habitTitle.style.textDecoration = "none";
 
-            completions[selectedDay] =
-                completions[selectedDay].filter(function(id) {
+            completions[dateKey] =
+                completions[dateKey].filter(function(id) {
                     return id !== habitId;
                 });
         }
 
-        updateProgress(selectedDay);
+        updateProgress(dateKey);
 
         console.log("Completions:", completions);
 });
